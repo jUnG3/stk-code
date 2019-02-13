@@ -26,6 +26,7 @@
 #include "config/saved_grand_prix.hpp"
 #include "config/stk_config.hpp"
 #include "config/user_config.hpp"
+#include "eventhub/eventhub.hpp"
 #include "graphics/irr_driver.hpp"
 #include "guiengine/message_queue.hpp"
 #include "input/device_manager.hpp"
@@ -508,6 +509,12 @@ void RaceManager::startNew(bool from_overworld)
 void RaceManager::startNextRace()
 {
     ProcessType type = STKProcess::getType();
+    EventHub::get()->publishEvent("NEW_RACE",
+                                  "{\"track\":\"%s\",\"laps\":%d,\"karts\":%d,\"difficulty\":%d}",
+                                  m_tracks[m_track_number].c_str(),
+                                  m_num_laps[m_track_number],
+                                  m_num_karts,
+                                  m_difficulty);
     main_loop->renderGUI(0);
     // Uncomment to debug audio leaks
     // sfx_manager->dump();
@@ -981,8 +988,22 @@ void RaceManager::kartFinishedRace(const AbstractKart *kart, float time)
     m_kart_status[id].m_overall_time += time;
     m_kart_status[id].m_last_time     = time;
     m_num_finished_karts ++;
-    if(kart->getController()->isPlayerController())
+
+
+    EventHub::get()->publishEvent("KART_FINISHED_RACE", "%d", id);
+
+    if(kart->getController()->isPlayerController()) {
         m_num_finished_players++;
+
+        EventHub::get()->publishEvent("PLAYER_RACE_COMPLETED",
+            "{\"track\":\"%s\",\"laps\":%d,\"karts\":%d,\"difficulty\":%d, \"time\": %f, \"kartId\": %u}",
+            m_tracks[m_track_number].c_str(),
+            m_num_laps[m_track_number],
+            m_num_karts,
+            m_difficulty,
+            time,
+            id);
+    }
 }   // kartFinishedRace
 
 //---------------------------------------------------------------------------------------------
