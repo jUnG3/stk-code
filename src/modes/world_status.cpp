@@ -23,6 +23,7 @@
 #include "audio/sfx_manager.hpp"
 #include "config/stk_config.hpp"
 #include "config/user_config.hpp"
+#include "eventhub/eventhub.hpp"
 #include "graphics/irr_driver.hpp"
 #include "guiengine/modaldialog.hpp"
 #include "karts/abstract_kart.hpp"
@@ -255,6 +256,7 @@ void WorldStatus::updateTime(int ticks)
                 if (m_play_ready_set_go_sounds)
                     m_prestart_sound->play();
                 m_phase = READY_PHASE;
+                EventHub::get()->publishEvent("COUNTDOWN", "READY");
             }
             return;   // Don't increase time
         case WAIT_FOR_SERVER_PHASE:
@@ -291,6 +293,7 @@ void WorldStatus::updateTime(int ticks)
                 if (m_play_ready_set_go_sounds)
                     m_prestart_sound->play();
                 m_phase = READY_PHASE;
+                EventHub::get()->publishEvent("COUNTDOWN", "READY");
             }
             return;   // Don't increase time
         }
@@ -305,6 +308,7 @@ void WorldStatus::updateTime(int ticks)
                 }
 
                 m_phase = SET_PHASE;
+                EventHub::get()->publishEvent("COUNTDOWN", "SET");
             }
 
             m_auxiliary_ticks++;
@@ -322,10 +326,12 @@ void WorldStatus::updateTime(int ticks)
 
             return;   // Do not increase time
         case SET_PHASE:
+            
             if (m_auxiliary_ticks > 2*stk_config->getPhysicsFPS())
             {
                 // set phase is over, go to the next one
                 m_phase = GO_PHASE;
+                EventHub::get()->publishEvent("COUNTDOWN", "GO");
                 if (m_play_ready_set_go_sounds)
                 {
                     m_start_sound->play();

@@ -1,3 +1,6 @@
+## SuperTuxKart fork for providing events
+This fork provides experimental events to allow external reaction to in game events.
+
 # SuperTuxKart
 [![Build Status](https://travis-ci.org/supertuxkart/stk-code.svg?branch=master)](https://travis-ci.org/supertuxkart/stk-code)
 [![AppVeyor Build Status](https://ci.appveyor.com/api/projects/status/github/supertuxkart/stk-code?svg=true&branch=master)](https://ci.appveyor.com/project/supertuxkart/stk-code)

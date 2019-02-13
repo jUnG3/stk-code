@@ -182,6 +182,8 @@
 #include "config/player_profile.hpp"
 #include "config/stk_config.hpp"
 #include "config/user_config.hpp"
+#include "eventhub/eventhub.hpp"
+#include "eventhub/file_publisher.hpp"
 #include "font/font_manager.hpp"
 #include "graphics/camera.hpp"
 #include "graphics/camera_debug.hpp"
@@ -936,6 +938,12 @@ int handleCmdLinePreliminary()
     {
         srand(n);
         Log::info("main", "STK using random seed (%d)", n);
+    }
+
+    if(CommandLine::has("--event-file", &s))
+    {
+        std::string file(s);
+        EventHub::get()->registerSink(new FilePublisher(file));
     }
 
     return 0;
