@@ -202,8 +202,6 @@ void Physics::update(int ticks)
                     ctx->SetArgDWord(0, kartid1);
                     ctx->SetArgDWord(1, kartid2);
                 });
-            EventHub::get()->publishEvent("KART_KART_COLLISION",
-                "{\"kartId1\":%d,\"kartId2\":%d}", kartid1, kartid2);
             continue;
         }  // if kart-kart collision
 
