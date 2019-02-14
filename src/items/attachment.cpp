@@ -24,6 +24,7 @@
 #include "config/player_manager.hpp"
 #include "config/stk_config.hpp"
 #include "config/user_config.hpp"
+#include "eventhub/eventhub.hpp"
 #include "graphics/explosion.hpp"
 #include "graphics/irr_driver.hpp"
 #include "graphics/render_info.hpp"
@@ -304,6 +305,9 @@ void Attachment::hitBanana(ItemState *item_state)
     {
     case ATTACH_BOMB:
         {
+        EventHub::get()->publishEvent("KART_EXPLODE",
+            "{\"kartId\":%d}", m_kart->getWorldKartId());
+
         add_a_new_item = false;
         if (!GUIEngine::isNoGraphics() && !RewindManager::get()->isRewinding())
         {
@@ -518,6 +522,8 @@ void Attachment::update(int ticks)
         {
             if (!GUIEngine::isNoGraphics() && !RewindManager::get()->isRewinding())
             {
+                EventHub::get()->publishEvent("KART_EXPLODE",
+                                              "{\"kartId\":%d}", m_kart->getWorldKartId());
                 HitEffect* he = new Explosion(m_kart->getXYZ(), "explosion",
                     "explosion_bomb.xml");
                 if (m_kart->getController()->isLocalPlayerController())

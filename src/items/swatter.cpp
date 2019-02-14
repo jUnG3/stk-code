@@ -30,6 +30,7 @@
 #include "audio/sfx_base.hpp"
 #include "audio/sfx_manager.hpp"
 #include "config/player_manager.hpp"
+#include "eventhub/eventhub.hpp"
 #include "graphics/explosion.hpp"
 #include "graphics/irr_driver.hpp"
 #include "io/file_manager.hpp"
@@ -404,6 +405,9 @@ void Swatter::squashThingsAround()
     {
         World::getWorld()->kartHit(m_closest_kart->getWorldKartId(),
             m_kart->getWorldKartId());
+
+        EventHub::get()->publishEvent("KART_FLATTENED",
+            "{\"kartId\":%d}", m_closest_kart->getWorldKartId());
 
         CaptureTheFlag* ctf = dynamic_cast<CaptureTheFlag*>(World::getWorld());
         if (ctf)
