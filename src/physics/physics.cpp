@@ -245,6 +245,8 @@ void Physics::update(int ticks)
                 if (kart->getKartAnimation() != NULL)
                 {
                     World::getWorld()->kartHit(kart->getWorldKartId());
+                    EventHub::get()->publishEvent("KART_EXPLODE",
+                        "{\"kartId\":%d}", kart->getWorldKartId());
                 }
             }
             else if (obj->isFlattenKartObject())
@@ -256,6 +258,8 @@ void Physics::update(int ticks)
                     kp->getSwatterSquashSlowdown()) && !was_squashed)
                 {
                     World::getWorld()->kartHit(kart->getWorldKartId());
+                    EventHub::get()->publishEvent("KART_FLATTENED",
+                        "{\"kartId\":%d}", kart->getWorldKartId());
                 }
             }
             else if(obj->isSoccerBall() && 
@@ -283,6 +287,8 @@ void Physics::update(int ticks)
                 if (kart->getKartAnimation() != NULL)
                 {
                     World::getWorld()->kartHit(kart->getWorldKartId());
+                    EventHub::get()->publishEvent("KART_EXPLODE",
+                        "{\"kartId\":%d}", kart->getWorldKartId());
                 }
             }
             else if (anim->isFlattenKartObject())
@@ -296,6 +302,8 @@ void Physics::update(int ticks)
                     kp->getSwatterSquashSlowdown()) && !was_squashed)
                 {
                     World::getWorld()->kartHit(kart->getWorldKartId());
+                    EventHub::get()->publishEvent("KART_FLATTENED",
+                        "{\"kartId\":%d}", kart->getWorldKartId());
                 }
 
             }
@@ -352,9 +360,6 @@ void Physics::update(int ticks)
                 Flyable *f = p->getUserPointer(0)->getPointerFlyable();
                 f->hit(target_kart);
 
-                EventHub::get()->publishEvent("PROJECTILE_HIT_KART",
-                "{\"kartId\":%d,\"type\":%d}", target_kart->getWorldKartId(), type);
-
                 // Check for achievements
                 AbstractKart * kart = World::getWorld()->getKart(f->getOwnerId());
                 LocalPlayerController *lpc =
@@ -373,6 +378,11 @@ void Physics::update(int ticks)
                             PlayerManager::increaseAchievement(AchievementsStatus::BOWLING_HIT_1RACE, 1);
                     }   // is bowling ball
                 }   // if target_kart != kart && is a player kart and is current player
+            
+                if (target_kart != kart) {
+                    EventHub::get()->publishEvent("PROJECTILE_HIT_KART",
+                        "{\"kartId\":%d,\"type\":%d}", target_kart->getWorldKartId(), type);
+                }
             }
 
         }
