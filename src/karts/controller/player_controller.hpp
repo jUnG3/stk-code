@@ -35,6 +35,8 @@ protected:
 
     int            m_penalty_ticks;
 
+    int            m_last_speed_event;
+
     virtual void  steer(int ticks, int steer_val);
 
 public:
