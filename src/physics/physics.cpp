@@ -22,6 +22,7 @@
 #include "config/player_manager.hpp"
 #include "config/player_profile.hpp"
 #include "config/user_config.hpp"
+#include "eventhub/eventhub.hpp"
 #include "karts/abstract_kart.hpp"
 #include "graphics/irr_driver.hpp"
 #include "graphics/stars.hpp"
@@ -201,6 +202,8 @@ void Physics::update(int ticks)
                     ctx->SetArgDWord(0, kartid1);
                     ctx->SetArgDWord(1, kartid2);
                 });
+            EventHub::get()->publishEvent("KART_KART_COLLISION",
+                "{\"kartId1\":%d,\"kartId2\":%d}", kartid1, kartid2);
             continue;
         }  // if kart-kart collision
 
@@ -348,6 +351,9 @@ void Physics::update(int ticks)
             {
                 Flyable *f = p->getUserPointer(0)->getPointerFlyable();
                 f->hit(target_kart);
+
+                EventHub::get()->publishEvent("PROJECTILE_HIT_KART",
+                "{\"kartId\":%d,\"type\":%d}", target_kart->getWorldKartId(), type);
 
                 // Check for achievements
                 AbstractKart * kart = World::getWorld()->getKart(f->getOwnerId());
