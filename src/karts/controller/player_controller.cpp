@@ -80,7 +80,7 @@ void PlayerController::resetInputState()
     m_steer_val             = 0;
     m_prev_brake            = 0;
     m_prev_accel            = 0;
-    m_last_speed_event      = 0;
+    m_prev_speed      = -1;
     m_prev_nitro            = false;
     m_controls->reset();
 }   // resetInputState
@@ -327,12 +327,11 @@ void PlayerController::update(int ticks)
 {
     steer(ticks, m_steer_val);
 
-    m_last_speed_event += ticks;
-    if (m_last_speed_event >= 10) {
+    if (abs(m_prev_speed - m_kart->getSpeed()) >= 1) {
         EventHub::get()->publishEvent("PLAYER_SPEED",
                         "%f", m_kart->getSpeed());
 
-        m_last_speed_event = 0;
+        m_prev_speed = m_kart->getSpeed();
     }
 
     if (World::getWorld()->isStartPhase())
