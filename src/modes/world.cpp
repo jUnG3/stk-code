@@ -24,6 +24,7 @@
 #include "config/player_manager.hpp"
 #include "challenges/unlock_manager.hpp"
 #include "config/user_config.hpp"
+#include "eventhub/eventhub.hpp"
 #include "graphics/camera.hpp"
 #include "graphics/central_settings.hpp"
 #include "graphics/irr_driver.hpp"
@@ -1428,6 +1429,8 @@ void World::pause(Phase phase)
     SFXManager::get()->pauseAll();
 
     WorldStatus::pause(phase);
+
+    EventHub::get()->publishEvent("PAUSE");
 }   // pause
 
 //-----------------------------------------------------------------------------
@@ -1449,6 +1452,7 @@ void World::unpause()
         if(pc)
             pc->resetInputState();
     }
+    EventHub::get()->publishEvent("UNPAUSE");
 }   // pause
 
 //-----------------------------------------------------------------------------
