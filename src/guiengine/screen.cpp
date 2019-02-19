@@ -18,6 +18,7 @@
 
 #include "guiengine/screen.hpp"
 
+#include "eventhub/eventhub.hpp"
 #include "io/file_manager.hpp"
 #include "graphics/irr_driver.hpp"
 #include "guiengine/engine.hpp"
@@ -104,6 +105,7 @@ void Screen::init()
  */
 void Screen::push()
 {
+    EventHub::get()->publishEvent("SCREEN_PUSHED", "%s", this->m_filename.c_str());
     StateManager::get()->pushScreen(this);
 }   // push
 
