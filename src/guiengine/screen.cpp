@@ -99,6 +99,8 @@ void Screen::init()
     if (m_pause_race && World::getWorld() &&
         !NetworkConfig::get()->isNetworking())
         World::getWorld()->schedulePause(World::IN_GAME_MENU_PHASE);
+
+    EventHub::get()->publishEvent("INIT_SCREEN", "%s", this->m_filename.c_str());
 }   // init
 
 // -----------------------------------------------------------------------------
@@ -107,7 +109,6 @@ void Screen::init()
  */
 void Screen::push()
 {
-    EventHub::get()->publishEvent("SCREEN_PUSHED", "%s", this->m_filename.c_str());
     StateManager::get()->pushScreen(this);
 }   // push
 
