@@ -136,7 +136,7 @@ void RaceResultGUI::init()
     {
         m_start_track = 0;
         m_end_track = (int)tracks.size();
-    }
+    }  
 }   // init
 
 //-----------------------------------------------------------------------------
@@ -1044,7 +1044,7 @@ void RaceResultGUI::displayCTFResults()
                 case RR_WAIT_TILL_END:
                     break;
                 }   // switch
-                displayOneEntry((unsigned int)x, (unsigned int)y, i, true);
+                //displayOneEntry((unsigned int)x, (unsigned int)y, i, true);
             }   // for i
         }
 
@@ -1052,7 +1052,7 @@ void RaceResultGUI::displayCTFResults()
         if (race_manager->getMajorMode() != RaceManager::MAJOR_MODE_GRAND_PRIX ||
             m_animation_state == RR_RACE_RESULT)
         {
-            displayPostRaceInfo();
+            //displayPostRaceInfo();
         }
 #endif
     }   // renderGlobal

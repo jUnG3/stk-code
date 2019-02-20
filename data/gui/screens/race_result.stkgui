@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <stkgui>
     <div x="2%" y="5%" width="100%" height="95%" layout="vertical-row" id="div">
-        <roundedbox width="90%" proportion="1" align="center">
+        <div width="90%" proportion="1">
             <div id="result-table" width="96%" height="96%" x="2%" y="2%">
                 <!-- Contents is added programatically -->
             </div>
-        </roundedbox>
+        </div>
         <spacer height="10" width="96%"/>
         <!-- The actual button texts will vary depending on what type of race
              was being run, and if something was unlocked etc. So we don't
