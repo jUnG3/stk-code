@@ -368,6 +368,9 @@ void World::reset(bool restart)
     if(race_manager->hasGhostKarts())
         ReplayPlay::get()->reset();
 
+    // Remove all (if any) previous game flyables before reset karts, so no
+    // explosion animation will be created
+    projectile_manager->cleanup();
     resetAllKarts();
     // Note: track reset must be called after all karts exist, since check
     // objects need to allocate data structures depending on the number
@@ -383,7 +386,6 @@ void World::reset(bool restart)
     // Enable SFX again
     SFXManager::get()->resumeAll();
 
-    projectile_manager->cleanup();
     RewindManager::get()->reset();
     race_manager->reset();
     // Make sure to overwrite the data from the previous race.
@@ -522,7 +524,8 @@ Controller* World::loadAIController(AbstractKart* kart)
     Controller *controller;
     int turn=0;
 
-    if(race_manager->getMinorMode()==RaceManager::MINOR_MODE_3_STRIKES)
+    if(race_manager->getMinorMode()==RaceManager::MINOR_MODE_3_STRIKES
+        || race_manager->getMinorMode()==RaceManager::MINOR_MODE_FREE_FOR_ALL)
         turn=1;
     else if(race_manager->getMinorMode()==RaceManager::MINOR_MODE_SOCCER)
         turn=2;

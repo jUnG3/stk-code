@@ -101,6 +101,8 @@ private:
     /** Wind. */
     Wind                 *m_wind;
 
+    core::dimension2du m_actual_screen_size;
+
     /** The main MRT setup. */
     core::array<video::IRenderTarget> m_mrt;
 
@@ -149,6 +151,9 @@ private:
 
     /** Whether the mouse cursor is currently shown */
     bool                  m_pointer_shown;
+
+    /** Store if the scene is complex (based on polycount, etc) */
+    int                  m_scene_complexity;
 
     /** Internal method that applies the resolution in user settings. */
     void                 applyResolutionSettings();
@@ -369,6 +374,13 @@ public:
     // ------------------------------------------------------------------------
     bool getBoundingBoxesViz()    { return m_boundingboxesviz;      }
     // ------------------------------------------------------------------------
+    int getSceneComplexity() { return m_scene_complexity;           }
+    void resetSceneComplexity() { m_scene_complexity = 0;           }
+    void addSceneComplexity(int complexity)
+    {
+        if (complexity > 1) m_scene_complexity += (complexity - 1);
+    }
+    // ------------------------------------------------------------------------
     bool isRecording() const { return m_recording; }
     // ------------------------------------------------------------------------
     void setRecording(bool val);
@@ -457,9 +469,8 @@ public:
     }
     // ------------------------------------------------------------------------
     const core::dimension2du getActualScreenSize() const
-    {
-        assert(m_video_driver != NULL);
-        return m_video_driver->getCurrentRenderTargetSize(); 
+    { 
+        return m_actual_screen_size;
     }
     // ------------------------------------------------------------------------
     float getSSAORadius() const

@@ -172,6 +172,7 @@ IrrDriver::IrrDriver()
     m_skinning_joint             = 0;
     m_recording = false;
     m_sun_interposer = NULL;
+    m_scene_complexity           = 0;
 
 #ifndef SERVER_ONLY
     for (unsigned i = 0; i < Q_LAST; i++)
@@ -539,7 +540,7 @@ void IrrDriver::initDevice()
     // fixed pipeline in this case.
     if (!ProfileWorld::isNoGraphics() &&
         (GraphicsRestrictions::isDisabled(GraphicsRestrictions::GR_FORCE_LEGACY_DEVICE) ||
-        !CentralVideoSettings::m_supports_sp))
+        (CVS->isGLSL() && !CentralVideoSettings::m_supports_sp)))
     {
         Log::warn("irr_driver", "Driver doesn't support shader-based pipeline. "
                                 "Re-creating device to workaround the issue.");
@@ -580,6 +581,8 @@ void IrrDriver::initDevice()
     m_scene_manager->addExternalMeshLoader(spml);
     spml->drop();
 
+    m_actual_screen_size = m_video_driver->getCurrentRenderTargetSize();
+
 #ifdef ENABLE_RECORDER
     ogrRegGeneralCallback(OGR_CBT_START_RECORDING,
         [] (void* user_data) { MessageQueue::add
@@ -598,8 +601,8 @@ void IrrDriver::initDevice()
     RecorderConfig cfg;
     cfg.m_triple_buffering = 1;
     cfg.m_record_audio = 1;
-    cfg.m_width = getActualScreenSize().Width;
-    cfg.m_height = getActualScreenSize().Height;
+    cfg.m_width = m_actual_screen_size.Width;
+    cfg.m_height = m_actual_screen_size.Height;
     int vf = UserConfigParams::m_video_format;
     cfg.m_video_format = (VideoFormat)vf;
     cfg.m_audio_format = OGR_AF_VORBIS;
@@ -911,13 +914,16 @@ void IrrDriver::applyResolutionSettings()
     m_video_driver->endScene();
     track_manager->removeAllCachedData();
     delete attachment_manager;
+    attachment_manager = NULL;
     projectile_manager->removeTextures();
     ItemManager::removeTextures();
     kart_properties_manager->unloadAllKarts();
     delete powerup_manager;
+    powerup_manager = NULL;
     Referee::cleanup();
     ParticleKindManager::get()->cleanup();
     delete input_manager;
+    input_manager = NULL;
     delete font_manager;
     font_manager = NULL;
     GUIEngine::clear();
@@ -941,7 +947,9 @@ void IrrDriver::applyResolutionSettings()
 #endif
     // initDevice will drop the current device.
     delete m_renderer;
+    m_renderer = NULL;
     SharedGPUObjects::reset();
+    
     SP::setMaxTextureSize();
     initDevice();
 
@@ -1718,7 +1726,7 @@ void IrrDriver::displayFPS()
     core::rect<s32> position;
 
     if (UserConfigParams::m_artist_debug_mode)
-        position = core::rect<s32>(75, 0, 1100, 40);
+        position = core::rect<s32>(51, 0, 1100, 80);
     else
         position = core::rect<s32>(75, 0, 900, 40);
     GL32_draw2DRectangle(video::SColor(150, 96, 74, 196), position, NULL);
@@ -1777,10 +1785,10 @@ void IrrDriver::displayFPS()
     {
         fps_string = StringUtils::insertValues
                     (L"FPS: %d/%d/%d  - PolyCount: %d Solid, "
-                      "%d Shadows - LightDist : %d, Total skinning joints: %d, "
+                      "%d Shadows - LightDist : %d\nComplexity %d, Total skinning joints: %d, "
                       "Ping: %dms",
                     min, fps, max, SP::sp_solid_poly_count,
-                    SP::sp_shadow_poly_count, m_last_light_bucket_distance,
+                    SP::sp_shadow_poly_count, m_last_light_bucket_distance, irr_driver->getSceneComplexity(),
                     m_skinning_joint, ping);
     }
     else

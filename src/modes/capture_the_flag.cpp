@@ -27,8 +27,6 @@
 #include "network/network_config.hpp"
 #include "network/network_string.hpp"
 #include "network/protocols/game_events_protocol.hpp"
-#include "network/rewind_info.hpp"
-#include "network/rewind_manager.hpp"
 #include "network/server_config.hpp"
 #include "network/stk_host.hpp"
 #include "physics/triangle_mesh.hpp"
@@ -86,13 +84,6 @@ void CaptureTheFlag::init()
     FreeForAll::init();
     const btTransform& orig_red = Track::getCurrentTrack()->getRedFlag();
     const btTransform& orig_blue = Track::getCurrentTrack()->getBlueFlag();
-    m_red_flag = std::make_shared<CTFFlag>(FC_RED, orig_red);
-    m_blue_flag = std::make_shared<CTFFlag>(FC_BLUE, orig_blue);
-    if (NetworkConfig::get()->isNetworking())
-    {
-        m_red_flag->rewinderAdd();
-        m_blue_flag->rewinderAdd();
-    }
 
 #ifndef SERVER_ONLY
     m_red_flag_node = irr_driver->addAnimatedMesh(m_red_flag_mesh, "red_flag");
@@ -117,11 +108,28 @@ void CaptureTheFlag::init()
     m_blue_flag_indicator->setPosition(Vec3(
         orig_blue(Vec3(0.0f, 2.5f, 0.0f))).toIrrVector());
 #endif
+
+    m_red_flag = std::make_shared<CTFFlag>(FC_RED, orig_red);
+    m_blue_flag = std::make_shared<CTFFlag>(FC_BLUE, orig_blue);
+    if (NetworkConfig::get()->isNetworking())
+    {
+        m_red_flag->rewinderAdd();
+        m_blue_flag->rewinderAdd();
+    }
+
+#ifndef SERVER_ONLY
+    m_red_flag->initFlagRenderInfo(m_red_flag_node);
+    m_blue_flag->initFlagRenderInfo(m_blue_flag_node);
+#endif
 }   // init
 
 // ----------------------------------------------------------------------------
 void CaptureTheFlag::reset(bool restart)
 {
+    // 5 bits for kart id (with -1 and -2 flag status)
+    if (m_karts.size() > 29)
+        Log::fatal("CaptureTheFlag", "Too many karts");
+
     FreeForAll::reset(restart);
     m_red_scores = m_blue_scores = 0;
     m_swatter_reset_kart_ticks.clear();
@@ -240,6 +248,7 @@ void CaptureTheFlag::update(int ticks)
     m_blue_flag->update(ticks);
 
     if (m_red_flag->getHolder() != -1 && m_blue_flag->isInBase() &&
+        m_blue_flag->isActivated() &&
         (m_blue_flag->getBaseOrigin() - m_red_flag->getOrigin()).length() <
         g_capture_length)
     {
@@ -267,9 +276,10 @@ void CaptureTheFlag::update(int ticks)
                 m_red_scores, new_blue_scores);
         }
         m_last_captured_flag_ticks = World::getWorld()->getTicksSinceStart();
-        m_red_flag->resetToBase();
+        m_red_flag->resetToBase(race_manager->getFlagDeactivatedTicks());
     }
     else if (m_blue_flag->getHolder() != -1 && m_red_flag->isInBase() &&
+        m_red_flag->isActivated() &&
         (m_red_flag->getBaseOrigin() - m_blue_flag->getOrigin()).length() <
         g_capture_length)
     {
@@ -297,7 +307,7 @@ void CaptureTheFlag::update(int ticks)
                 new_red_scores, m_blue_scores);
         }
         m_last_captured_flag_ticks = World::getWorld()->getTicksSinceStart();
-        m_blue_flag->resetToBase();
+        m_blue_flag->resetToBase(race_manager->getFlagDeactivatedTicks());
     }
 
     // Test if red or blue flag is touched
@@ -316,7 +326,8 @@ void CaptureTheFlag::update(int ticks)
                 if (!m_red_flag->isInBase())
                 {
                     // Return the flag
-                    m_red_flag->resetToBase();
+                    m_red_flag->resetToBase(
+                        race_manager->getFlagDeactivatedTicks());
                 }
             }
             else
@@ -335,7 +346,8 @@ void CaptureTheFlag::update(int ticks)
                 if (!m_blue_flag->isInBase())
                 {
                     // Return the flag
-                    m_blue_flag->resetToBase();
+                    m_blue_flag->resetToBase(
+                        race_manager->getFlagDeactivatedTicks());
                 }
             }
             else
@@ -479,38 +491,20 @@ void CaptureTheFlag::loseFlagForKart(int kart_id)
         if (succeed)
             m_red_flag->dropFlagAt(dropped_trans);
         else
-            m_red_flag->resetToBase();
+        {
+            m_red_flag->resetToBase(
+                race_manager->getFlagDeactivatedTicks());
+        }
     }
     else
     {
         if (succeed)
             m_blue_flag->dropFlagAt(dropped_trans);
         else
-            m_blue_flag->resetToBase();
-    }
-    if (NetworkConfig::get()->isNetworking() &&
-        NetworkConfig::get()->isClient())
-    {
-        RewindManager::get()->addRewindInfoEventFunction(new
-            RewindInfoEventFunction(World::getWorld()->getTicksSinceStart(),
-            [](){},
-            /*replay_function*/[dropped_trans, drop_red_flag, succeed, this]()
-            {
-                if (drop_red_flag)
-                {
-                    if (succeed)
-                        m_red_flag->dropFlagAt(dropped_trans);
-                    else
-                        m_red_flag->resetToBase();
-                }
-                else
-                {
-                    if (succeed)
-                        m_blue_flag->dropFlagAt(dropped_trans);
-                    else
-                        m_blue_flag->resetToBase();
-                }
-            }));
+        {
+            m_blue_flag->resetToBase(
+                race_manager->getFlagDeactivatedTicks());
+        }
     }
 }   // loseFlagForKart
 

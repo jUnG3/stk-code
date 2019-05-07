@@ -47,7 +47,7 @@ void NetworkItemManager::create()
  *  "I" which is less than "Kx" (kart rewinder with id x)
  */
 NetworkItemManager::NetworkItemManager()
-                  : Rewinder("I"), ItemManager()
+                  : Rewinder({RN_ITEM_MANAGER}), ItemManager()
 {
     m_confirmed_switch_ticks = -1;
     m_last_confirmed_item_ticks.clear();
@@ -82,21 +82,6 @@ void NetworkItemManager::reset()
     m_confirmed_switch_ticks = -1;
     ItemManager::reset();
 }   // reset
-
-//-----------------------------------------------------------------------------
-/** Initialize state at the start of a race.
- */
-void NetworkItemManager::initClientConfirmState()
-{
-    m_confirmed_state_time = 0;
-
-    m_confirmed_state.clear();
-    for(auto i : m_all_items)
-    {
-        ItemState *is = new ItemState(*i);
-        m_confirmed_state.push_back(is);
-    }
-}   // initClientConfirmState
 
 //-----------------------------------------------------------------------------
 /** Called when a kart collects an item. In network games only the server
@@ -490,7 +475,7 @@ void NetworkItemManager::restoreState(BareNetworkString *buffer, int count)
     // be the larger group (confirmed: when a new item was dropped
     // by a remote kart; all_items: if an item is predicted on
     // the client, but not yet confirmed). So 
-    unsigned int max_index = std::max(m_confirmed_state.size(),
+    size_t max_index = std::max(m_confirmed_state.size(),
                                       m_all_items.size()        );
     m_all_items.resize(max_index, NULL);
 
@@ -557,6 +542,7 @@ void NetworkItemManager::saveCompleteState(BareNetworkString* buffer) const
 
 //-----------------------------------------------------------------------------
 /** Restore all current items at current ticks in client for live join
+ *  or at the start of a race.
  */
 void NetworkItemManager::restoreCompleteState(const BareNetworkString& buffer)
 {

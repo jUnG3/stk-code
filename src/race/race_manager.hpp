@@ -254,7 +254,8 @@ public:
                           DIFFICULTY_HARD,
                           DIFFICULTY_BEST,
                           DIFFICULTY_LAST = DIFFICULTY_BEST,
-                          DIFFICULTY_COUNT};
+                          DIFFICULTY_COUNT,
+                          DIFFICULTY_NONE};
 
     /** Different kart types: A local player, a player connected via network,
      *  an AI kart, the leader kart (currently not used), a ghost kart and
@@ -357,6 +358,7 @@ private:
     unsigned int                     m_num_finished_karts;
     unsigned int                     m_num_finished_players;
     unsigned                         m_flag_return_ticks;
+    unsigned                         m_flag_deactivated_ticks;
     int                              m_coin_target;
     float                            m_time_target;
     int                              m_goal_target;
@@ -901,6 +903,12 @@ public:
     void setFlagReturnTicks(unsigned ticks)    { m_flag_return_ticks = ticks; }
     // ------------------------------------------------------------------------
     unsigned getFlagReturnTicks() const         { return m_flag_return_ticks; }
+    // ------------------------------------------------------------------------
+    void setFlagDeactivatedTicks(unsigned ticks)
+                                          { m_flag_deactivated_ticks = ticks; }
+    // ------------------------------------------------------------------------
+    unsigned getFlagDeactivatedTicks() const
+                                           { return m_flag_deactivated_ticks; }
     // ------------------------------------------------------------------------
     /** Whether the current game mode allow live joining even the current game
      *. started in network*/

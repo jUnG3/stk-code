@@ -33,6 +33,7 @@
 #include "modes/profile_world.hpp"
 #include "modes/world.hpp"
 #include "network/network_config.hpp"
+#include "network/network_timer_synchronizer.hpp"
 #include "network/protocols/game_protocol.hpp"
 #include "network/protocol_manager.hpp"
 #include "network/race_event_manager.hpp"
@@ -118,6 +119,31 @@ float MainLoop::getLimitedDt()
     while( 1 )
     {
         m_curr_time = StkTime::getRealTimeMs();
+        if (m_prev_time > m_curr_time)
+        {
+            m_prev_time = m_curr_time;
+            // If system time adjusted backwards, return fixed dt and
+            // resynchronize network timer if exists in client
+            if (STKHost::existHost())
+            {
+#ifndef SERVER_ONLY
+                if (UserConfigParams::m_artist_debug_mode &&
+                    !ProfileWorld::isNoGraphics())
+                {
+                    core::stringw err = L"System clock running backwards in"
+                        " networking game.";
+                    MessageQueue::add(MessageQueue::MT_ERROR, err);
+                }
+#endif
+                Log::error("MainLoop", "System clock running backwards in"
+                    " networking game.");
+                if (STKHost::get()->getNetworkTimerSynchronizer())
+                {
+                    STKHost::get()->getNetworkTimerSynchronizer()
+                        ->resynchroniseTimer();
+                }
+            }
+        }
         dt = (float)(m_curr_time - m_prev_time);
         // On a server (i.e. without graphics) the frame rate can be under
         // 1 ms, i.e. dt = 0. Additionally, the resolution of a sleep
@@ -128,12 +154,15 @@ float MainLoop::getLimitedDt()
         // with clients (server time is supposed to be behind client time).
         // So we play it safe by adding a loop to make sure at least 1ms
         // (minimum time that can be handled by the integer timer) delay here.
-        // Only exception is profile mode (typically running without graphics),
-        // which we want to run as fast as possible.
-        while (dt <= 0 && !ProfileWorld::isProfileMode())
+        while (dt == 0)
         {
             StkTime::sleep(1);
             m_curr_time = StkTime::getRealTimeMs();
+            if (m_prev_time > m_curr_time)
+            {
+                Log::error("MainLopp", "System clock keeps backwards!");
+                m_prev_time = m_curr_time;
+            }
             dt = (float)(m_curr_time - m_prev_time);
         }
 
@@ -492,7 +521,12 @@ void MainLoop::run()
 
                 if (m_frame_before_loading_world)
                 {
+                    // This will be called when changing introcutscene 1 and 2
+                    // in CutsceneWorld::enterRaceOverState
+                    // Reset the timer for correct time for cutscene
                     m_frame_before_loading_world = false;
+                    m_curr_time = StkTime::getRealTimeMs();
+                    left_over_time = 0.0f;
                     break;
                 }
 
@@ -514,7 +548,15 @@ void MainLoop::run()
             {
                 // User aborted (e.g. closed window)
                 bool abort = !irr_driver->getDevice()->run();
-                
+
+                if (m_frame_before_loading_world)
+                {
+                    // irr_driver->getDevice()->run() loads the world
+                    m_frame_before_loading_world = false;
+                    m_curr_time = StkTime::getRealTimeMs();
+                    left_over_time = 0.0f;
+                }
+
                 if (abort)
                 {
                     m_request_abort = true;

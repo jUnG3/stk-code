@@ -28,6 +28,9 @@
 #include "network/smooth_network_body.hpp"
 #include "physics/physics.hpp"
 #include "race/history.hpp"
+#include "tracks/check_manager.hpp"
+#include "tracks/track.hpp"
+#include "tracks/track_object_manager.hpp"
 #include "utils/log.hpp"
 #include "utils/profiler.hpp"
 
@@ -309,7 +312,7 @@ void RewindManager::rewindTo(int rewind_ticks, int now_ticks,
 
     // Rewind the required state(s)
     // ----------------------------
-    World *world = World::getWorld();
+    World* world = World::getWorld();
 
     // Now start the rewind with the full state. It is important that the
     // world time is set first, since e.g. the NetworkItem manager relies
@@ -352,6 +355,18 @@ void RewindManager::rewindTo(int rewind_ticks, int now_ticks,
         current->restore();
         m_rewind_queue.next();
         current = m_rewind_queue.getCurrent();
+    }
+
+    // Update check line, so the cannon animation can be replayed correctly
+    CheckManager::get()->resetAfterRewind();
+
+    if (exact_rewind_ticks > 0)
+    {
+        // Restore all physical objects moved by 3d animation, as it only
+        // set the motion state of physical bodies, it has 1 frame delay
+        world->setTicksForRewind(exact_rewind_ticks - 1);
+        Track::getCurrentTrack()->getTrackObjectManager()->resetAfterRewind();
+        world->setTicksForRewind(exact_rewind_ticks);
     }
 
     // Now go forward through the list of rewind infos till we reach 'now':

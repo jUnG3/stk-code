@@ -192,10 +192,10 @@ void NetworkingLobby::init()
     m_start_button->setVisible(false);
     m_config_button->setVisible(false);
     m_state = LS_CONNECTING;
-    getWidget("chat")->setVisible(false);
-    getWidget("chat")->setActive(false);
-    getWidget("send")->setVisible(false);
-    getWidget("send")->setActive(false);
+    m_chat_box->setVisible(false);
+    m_chat_box->setActive(false);
+    m_send_button->setVisible(false);
+    m_send_button->setActive(false);
 
     // Connect to server now if we have saved players and not disconnected
     if (!LobbyProtocol::get<LobbyProtocol>() &&
@@ -213,19 +213,19 @@ void NetworkingLobby::init()
         {
             m_chat_box->addListener(this);
             m_chat_box->setText("");
-            getWidget("chat")->setVisible(true);
-            getWidget("chat")->setActive(true);
-            getWidget("send")->setVisible(true);
-            getWidget("send")->setActive(true);
+            m_chat_box->setVisible(true);
+            m_chat_box->setActive(true);
+            m_send_button->setVisible(true);
+            m_send_button->setActive(true);
         }
         else
         {
             m_chat_box->setText(
                 _("Chat is disabled, enable in options menu."));
-            getWidget("chat")->setVisible(true);
-            getWidget("chat")->setActive(false);
-            getWidget("send")->setVisible(true);
-            getWidget("send")->setActive(false);
+            m_chat_box->setVisible(true);
+            m_chat_box->setActive(false);
+            m_send_button->setVisible(true);
+            m_send_button->setActive(false);
         }
         if (auto cl = LobbyProtocol::get<ClientLobby>())
         {
@@ -264,6 +264,16 @@ void NetworkingLobby::addMoreServerInfo(core::stringw info)
     {
         m_server_info.erase(m_server_info.begin());
     }
+
+    if (GUIEngine::getCurrentScreen() != this)
+        return;
+    core::stringw total_msg;
+    for (auto& string : m_server_info)
+    {
+        total_msg += string;
+        total_msg += L"\n";
+    }
+    m_text_bubble->setText(total_msg, true);
 }   // addMoreServerInfo
 
 // ----------------------------------------------------------------------------
@@ -298,6 +308,19 @@ void NetworkingLobby::onUpdate(float delta)
         m_header->setText(_("Lobby (ping: %dms)", ping), false);
 
     auto cl = LobbyProtocol::get<ClientLobby>();
+    if (cl && UserConfigParams::m_lobby_chat)
+    {
+        if (cl->serverEnabledChat() && !m_send_button->isActivated())
+        {
+            m_chat_box->setActive(true);
+            m_send_button->setActive(true);
+        }
+        else if (!cl->serverEnabledChat() && m_send_button->isActivated())
+        {
+            m_chat_box->setActive(false);
+            m_send_button->setActive(false);
+        }
+    }
     if (cl && cl->isWaitingForGame())
     {
         m_start_button->setVisible(false);
@@ -367,13 +390,6 @@ void NetworkingLobby::onUpdate(float delta)
             m_client_live_joinable = false;
 
         m_timeout_message->setText(msg, false);
-        core::stringw total_msg;
-        for (auto& string : m_server_info)
-        {
-            total_msg += string;
-            total_msg += L"\n";
-        }
-        m_text_bubble->setText(total_msg, true);
         m_cur_starting_timer = std::numeric_limits<int64_t>::max();
 
         if (m_client_live_joinable)
@@ -464,16 +480,6 @@ void NetworkingLobby::onUpdate(float delta)
         }
         m_text_bubble->setText(connect_msg, false);
         m_start_button->setVisible(false);
-    }
-    else
-    {
-        core::stringw total_msg;
-        for (auto& string : m_server_info)
-        {
-            total_msg += string;
-            total_msg += L"\n";
-        }
-        m_text_bubble->setText(total_msg, true);
     }
 
     m_config_button->setVisible(STKHost::get()->isAuthorisedToControl() &&
@@ -584,7 +590,6 @@ void NetworkingLobby::eventCallback(Widget* widget, const std::string& name,
         auto cl = LobbyProtocol::get<ClientLobby>();
         if (m_client_live_joinable && cl)
         {
-            cl->setSpectator(true);
             NetworkString start(PROTOCOL_LOBBY_ROOM);
             start.setSynchronous(true);
             start.addUInt8(LobbyProtocol::LE_LIVE_JOIN)
@@ -705,18 +710,18 @@ void NetworkingLobby::finishAddingPlayers()
     if (UserConfigParams::m_lobby_chat)
     {
         m_chat_box->addListener(this);
-        getWidget("chat")->setVisible(true);
-        getWidget("chat")->setActive(true);
-        getWidget("send")->setVisible(true);
-        getWidget("send")->setActive(true);
+        m_chat_box->setVisible(true);
+        m_chat_box->setActive(true);
+        m_send_button->setVisible(true);
+        m_send_button->setActive(true);
     }
     else
     {
         m_chat_box->setText(_("Chat is disabled, enable in options menu."));
-        getWidget("chat")->setVisible(true);
-        getWidget("chat")->setActive(false);
-        getWidget("send")->setVisible(true);
-        getWidget("send")->setActive(false);
+        m_chat_box->setVisible(true);
+        m_chat_box->setActive(false);
+        m_send_button->setVisible(true);
+        m_send_button->setActive(false);
     }
 }   // finishAddingPlayers
 

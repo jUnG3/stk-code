@@ -182,7 +182,9 @@ void RaceResultGUI::enableAllButtons()
     // If something was unlocked
     // -------------------------
     int n = (int)PlayerManager::getCurrentPlayer()->getRecentlyCompletedChallenges().size();
-    if (n > 0)
+    if (n > 0 &&
+         (race_manager->getMajorMode() != RaceManager::MAJOR_MODE_GRAND_PRIX ||
+          race_manager->getTrackNumber() + 1 == race_manager->getNumOfTracks() ) )
     {
         top->setText(n == 1 ? _("You completed a challenge!")
             : _("You completed challenges!"));
@@ -289,7 +291,10 @@ void RaceResultGUI::eventCallback(GUIEngine::Widget* widget,
     // ---------------------------------------------------------
     int n = (int)PlayerManager::getCurrentPlayer()
         ->getRecentlyCompletedChallenges().size();
-    if (n>0)
+    if (n > 0 &&
+         (race_manager->getMajorMode() != RaceManager::MAJOR_MODE_GRAND_PRIX ||
+          race_manager->getTrackNumber() + 1 == race_manager->getNumOfTracks() ) )
+
     {
         if (name == "top")
         {
@@ -684,6 +689,7 @@ void RaceResultGUI::displayCTFResults()
         FreeForAll* ffa = dynamic_cast<FreeForAll*>(World::getWorld());
 
         int time_precision = race_manager->currentModeTimePrecision();
+        bool active_gp = (race_manager->getMajorMode() == RaceManager::MAJOR_MODE_GRAND_PRIX);
 
         for (unsigned int position = first_position;
         position <= race_manager->getNumberOfKarts() - sta; position++)
@@ -728,7 +734,7 @@ void RaceResultGUI::displayCTFResults()
                 m_width_kart_name = rect.Width;
         }   // for position
 
-        std::string max_time = StringUtils::timeToString(max_finish_time, time_precision);
+        std::string max_time = StringUtils::timeToString(max_finish_time, time_precision, true, /*display hours*/ active_gp);
         core::stringw string_max_time(max_time.c_str());
         core::dimension2du r = m_font->getDimension(string_max_time.c_str());
         m_width_finish_time = r.Width;
@@ -792,7 +798,7 @@ void RaceResultGUI::displayCTFResults()
             m_table_width += m_width_finish_time + m_width_column_space;
 
         // Only in GP mode are the points displayed.
-        if (race_manager->getMajorMode() == RaceManager::MAJOR_MODE_GRAND_PRIX)
+        if (active_gp)
             m_table_width += m_width_new_points + m_width_all_points
             + 2 * m_width_column_space;
 
@@ -1072,6 +1078,13 @@ void RaceResultGUI::displayCTFResults()
 
         int time_precision = race_manager->currentModeTimePrecision();
 
+        float max_time = 0;
+        /* Compute highest overall time to know if hours should be displayed */
+        for (unsigned int kart_id = 0; kart_id < num_karts; kart_id++)
+        {
+            max_time = std::max(race_manager->getOverallTime(kart_id), max_time);
+        }
+
         for (unsigned int kart_id = 0; kart_id < num_karts; kart_id++)
         {
             int rank = race_manager->getKartGPRank(kart_id);
@@ -1096,7 +1109,7 @@ void RaceResultGUI::displayCTFResults()
             {
                 float time = race_manager->getOverallTime(kart_id);
                 ri->m_finish_time_string
-                    = StringUtils::timeToString(time, time_precision).c_str();
+                    = StringUtils::timeToString(time, time_precision, true, /*display hours*/ (max_time > 7199.99f)).c_str();
             }
             ri->m_start_at = m_time_between_rows * rank;
             ri->m_x_pos = (float)UserConfigParams::m_width;

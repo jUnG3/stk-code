@@ -148,7 +148,11 @@ private:
     /** Number of ranked races done for each current players */
     std::map<uint32_t, unsigned> m_num_ranked_races;
 
+    /* Saved the last game result */
     NetworkString* m_result_ns;
+
+    /* Used to make sure clients are having same item list at start */
+    BareNetworkString* m_items_complete_state;
 
     std::atomic<uint32_t> m_server_id_online;
 
@@ -268,7 +272,7 @@ private:
     double getUncertaintySpread(uint32_t online_id);
     double scalingValueForTime(double time);
     void checkRaceFinished();
-    void getHitCaptureLimit(float num_karts);
+    void getHitCaptureLimit();
     void configPeersStartTime();
     void resetServer();
     void addWaitingPlayersToGame();
@@ -277,7 +281,11 @@ private:
     void addLiveJoinPlaceholder(
         std::vector<std::shared_ptr<NetworkPlayerProfile> >& players) const;
     NetworkString* getLoadWorldMessage(
+        std::vector<std::shared_ptr<NetworkPlayerProfile> >& players,
+        bool live_join) const;
+    void encodePlayers(BareNetworkString* bns,
         std::vector<std::shared_ptr<NetworkPlayerProfile> >& players) const;
+    std::vector<std::shared_ptr<NetworkPlayerProfile> > getLivePlayers() const;
     void setPlayerKarts(const NetworkString& ns, STKPeer* peer) const;
     void liveJoinRequest(Event* event);
     void rejectLiveJoin(STKPeer* peer, BackLobbyReason blr);
@@ -315,6 +323,7 @@ public:
     float getStartupBoostOrPenaltyForKart(uint32_t ping, unsigned kart_id);
     int getDifficulty() const                   { return m_difficulty.load(); }
     int getGameMode() const                      { return m_game_mode.load(); }
+    void saveInitialItems();
 };   // class ServerLobby
 
 #endif // SERVER_LOBBY_HPP

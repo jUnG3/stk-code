@@ -46,6 +46,10 @@ WorldStatus::WorldStatus()
     m_prestart_sound    = SFXManager::get()->createSoundSource("pre_start_race");
     m_start_sound       = SFXManager::get()->createSoundSource("start_race");
     m_track_intro_sound = SFXManager::get()->createSoundSource("track_intro");
+    m_time            = 0.0f;
+    m_time_ticks      = 0;
+    m_auxiliary_ticks = 0;
+    m_count_up_ticks  = 0;
 
     m_play_track_intro_sound = UserConfigParams::m_music;
     m_play_ready_set_go_sounds = true;
@@ -350,9 +354,7 @@ void WorldStatus::updateTime(int ticks)
                     stk_config->time2Ticks(0.2f) :
                     stk_config->time2Ticks(1.0f);
                 // how long to display the 'music' message
-                // no graphics mode goes race phase at 3 seconds;
-                m_race_ticks = ProfileWorld::isNoGraphics() ?
-                    stk_config->time2Ticks(3.0f) :
+                m_race_ticks =
                     stk_config->time2Ticks(stk_config->m_music_credit_time);
             }
 
@@ -381,7 +383,14 @@ void WorldStatus::updateTime(int ticks)
                 {
                     music_manager->startMusic();
                 }
-                m_phase = MUSIC_PHASE;
+                // no graphics mode goes race phase now
+                if (ProfileWorld::isNoGraphics())
+                {
+                    m_race_ticks = -1;
+                    m_phase = RACE_PHASE;
+                }
+                else
+                    m_phase = MUSIC_PHASE;
             }
             break;   // Now the world time starts
         }
@@ -426,10 +435,6 @@ void WorldStatus::updateTime(int ticks)
         case IN_GAME_MENU_PHASE:
             // Nothing to do here.
             break;
-        case GOAL_PHASE:
-            // Nothing to do here as well.
-            break;
-
         default: break;
     }
 
@@ -481,7 +486,6 @@ void WorldStatus::updateTime(int ticks)
 void WorldStatus::setTime(const float time)
 {
     int new_time_ticks = stk_config->time2Ticks(time);
-    m_count_up_ticks  += (new_time_ticks - m_time_ticks);
     m_time_ticks       = new_time_ticks;
     m_time             = stk_config->ticks2Time(new_time_ticks);
 }   // setTime
@@ -492,7 +496,6 @@ void WorldStatus::setTime(const float time)
  */
 void WorldStatus::setTicks(int ticks)
 {
-    m_count_up_ticks += ticks - m_time_ticks;
     m_time_ticks = ticks;
     m_time = stk_config->ticks2Time(ticks);
 }   // setTicks

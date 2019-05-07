@@ -43,25 +43,25 @@ KeyboardLayout layout_lower =
             {{"q", "w", "e", "r", "t", "y", "u", "i", "o", "p"},
              {"Separator", "a", "s", "d", "f", "g", "h", "j", "k", "l", "Separator"},
              {"Shift", "z", "x", "c", "v", "b", "n", "m", "?", "Back"},
-             {"123", ".", "Space", ",", "Enter"}};
+             {"123", ",", "Space", ".", "Enter"}};
              
 KeyboardLayout layout_upper = 
             {{"Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"},
              {"Separator", "A", "S", "D", "F", "G", "H", "J", "K", "L", "Separator"},
              {"Shift", "Z", "X", "C", "V", "B", "N", "M", "!", "Back"},
-             {"123", ".", "Space", ",", "Enter"}};
+             {"123", ",", "Space", ".", "Enter"}};
                           
 KeyboardLayout layout_digits = 
             {{"1", "2", "3", "4", "5", "6", "7", "8", "9", "0"},
              {"Separator", "@", "#", "$", "%", "^", "&", "*", "(", ")", "Separator"},
              {"Shift", "-", "+", ":", ";", "\"", "\'", "/", "?", "Back"},
-             {"Text", ".", "Space", ",", "Enter"}};
+             {"Text", ",", "Space", ".", "Enter"}};
 
 KeyboardLayout layout_digits2 = 
             {{"1", "2", "3", "4", "5", "6", "7", "8", "9", "0"},
              {"Separator", "@", "[", "]", "{", "}", "~", "`", "\\", "|", "Separator"},
              {"Shift", "_", "=", ":", ";", "<", ">", "/", "!", "Back"},
-             {"Text", ".", "Space", ",", "Enter"}};
+             {"Text", ",", "Space", ".", "Enter"}};
 
 KeyboardLayoutProportions layout_proportions = 
             {{2, 2, 2, 2, 2, 2, 2, 2, 2, 2},
@@ -362,27 +362,36 @@ bool ScreenKeyboard::onEvent(const SEvent &event)
     if (event.EventType == EET_MOUSE_INPUT_EVENT)
     {
         core::position2d<s32> point(event.MouseInput.X, event.MouseInput.Y);
-        bool is_point_inside = m_irrlicht_window->isPointInside(point);
         
-        if (event.MouseInput.Event == EMIE_LMOUSE_PRESSED_DOWN)
+        if (m_edit_box->isPointInside(point))
         {
-            if (!is_point_inside)
-            {
-                m_schedule_close = true;
-                return true;
-            }
+            m_edit_box->OnEvent(event);
+            return true;
         }
-        else if (event.MouseInput.Event == EMIE_LMOUSE_LEFT_UP)
+        else
         {
-            if (!is_point_inside && m_schedule_close)
+            bool is_point_inside = m_irrlicht_window->isPointInside(point);
+            
+            if (event.MouseInput.Event == EMIE_LMOUSE_PRESSED_DOWN)
             {
-                dismiss();
-                return true;
+                if (!is_point_inside)
+                {
+                    m_schedule_close = true;
+                    return true;
+                }
             }
-            else
+            else if (event.MouseInput.Event == EMIE_LMOUSE_LEFT_UP)
             {
-                m_schedule_close = false;
-                return false;
+                if (!is_point_inside && m_schedule_close)
+                {
+                    dismiss();
+                    return true;
+                }
+                else
+                {
+                    m_schedule_close = false;
+                    return false;
+                }
             }
         }
     }

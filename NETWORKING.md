@@ -2,7 +2,11 @@
 
 ## Hosting server
 First of all, you can compile STK with `-DSERVER_ONLY=ON` which will produce a GUI-less STK binary optimized for size and memory usage, useful for situation like in VPS.
-
+The dependencies for RHEL/CentOS 7 are installed with:
+```bash
+yum install wget; cd /tmp; wget https://dl.fedoraproject.org/pub/epel/7/x86_64/Packages/e/epel-release-7-11.noarch.rpm; rpm -Uvh epel-release*rpm
+yum install gcc-c++ cmake openssl-devel libcurl-devel zlib-devel enet gcc-c++
+```
 ### Hosting WAN (public internet) server
 You are required to have an stk online account first, go [here](https://online.supertuxkart.net/register.php) for registration.
 
@@ -21,7 +25,7 @@ It will create that xml configuration file if not found in current directory, yo
 The current server configuration xml looks like this:
 ```xml
 <?xml version="1.0"?>
-<server-config version="5" >
+<server-config version="6" >
 
     <!-- Name of server, encode in XML if you want to use unicode characters. -->
     <server-name value="stk server" />
@@ -56,7 +60,13 @@ The current server configuration xml looks like this:
     <!-- Message of today shown in lobby, you can enter encoded XML words here or a file.txt and let STK load it. -->
     <motd value="" />
 
-    <!-- Timeout in seconds for voting tracks in server. -->
+    <!-- If off this server will ignore chat message from all players. -->
+    <chat value="true" />
+
+    <!-- Allow players to vote track to play, if off server will pick next track to play randomly. -->
+    <track-voting value="true" />
+
+    <!-- Timeout in seconds for selecting karts and (or) voting tracks in server, you may want to use a lower value if you have track-voting off. -->
     <voting-timeout value="30" />
 
     <!-- Timeout in seconds for validation of clients in wan, currently stk will use the stk-addons server to share AES key between client and server. -->
@@ -102,7 +112,10 @@ The current server configuration xml looks like this:
     <live-players value="true" />
 
     <!-- Time in seconds when a flag is dropped a by player in CTF returning to its own base. -->
-    <flag-return-timemout value="20" />
+    <flag-return-timeout value="20" />
+
+    <!-- Time in seconds to deactivate a flag when it's captured or returned to own base by players. -->
+    <flag-deactivated-time value="3" />
 
     <!-- Hit limit of free for all, zero to disable hit limit. -->
     <hit-limit value="20" />
@@ -155,7 +168,7 @@ By default STK servers use port `2759`. For example, in Ubuntu based distributio
 
 You may also need to handle the server discovery port `2757` for connecting your WAN server in LAN / localhost.
 
-Notice: You don't need to make any firewall or router configuration changes if you connect to our trusted servers.
+Notice: You don't need to make any firewall or router configuration changes if you connect to the recommended servers (marked with ☆★STK★☆).
 
 ### Hosting LAN (local internet) server
 Everything is basically the same as WAN one, except you don't need an stk online account, just do:

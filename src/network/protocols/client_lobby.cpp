@@ -91,11 +91,14 @@ ClientLobby::ClientLobby(const TransportAddress& a, std::shared_ptr<Server> s)
     m_disconnected_msg[PDI_TIMEOUT] = _("Server connection timed out.");
     m_disconnected_msg[PDI_NORMAL] = _("Server has been shut down.");
     m_disconnected_msg[PDI_KICK] = _("You were kicked from the server.");
-    m_disconnected_msg[PDI_BAD_CONNECTION] =
-        _("Bad network connection is detected.");
+    m_disconnected_msg[PDI_KICK_HIGH_PING] =
+        _("You were kicked: Ping too high.");
     m_first_connect = true;
     m_spectator = false;
     m_server_live_joinable = false;
+    m_server_send_live_load_world = false;
+    m_server_enabled_chat = true;
+    m_server_enabled_track_voting = true;
 }   // ClientLobby
 
 //-----------------------------------------------------------------------------
@@ -116,6 +119,7 @@ ClientLobby::~ClientLobby()
 void ClientLobby::setup()
 {
     m_spectator = false;
+    m_server_send_live_load_world = false;
     m_auto_back_to_lobby_time = std::numeric_limits<uint64_t>::max();
     m_start_live_game_time = std::numeric_limits<uint64_t>::max();
     m_received_server_result = false;
@@ -166,6 +170,7 @@ bool ClientLobby::notifyEvent(Event* event)
         case LE_BAD_CONNECTION:        handleBadConnection();      break;
         case LE_LIVE_JOIN_ACK:        liveJoinAcknowledged(event); break;
         case LE_KART_INFO:             handleKartInfo(event);      break;
+        case LE_START_RACE:            startGame(event);           break;
         default:
             return false;
             break;
@@ -187,7 +192,6 @@ bool ClientLobby::notifyEventAsynchronous(Event* event)
                   message_type);
         switch(message_type)
         {
-            case LE_START_RACE: startGame(event);                        break;
             default:                                                     break;
         }   // switch
 
@@ -254,26 +258,13 @@ void ClientLobby::addAllPlayers(Event* event)
 
     std::shared_ptr<STKPeer> peer = event->getPeerSP();
     peer->cleanPlayerProfiles();
-    std::vector<std::shared_ptr<NetworkPlayerProfile> > players;
-    unsigned player_count = data.getUInt8();
+    m_server_send_live_load_world = data.getUInt8() == 1;
 
-    for (unsigned i = 0; i < player_count; i++)
-    {
-        core::stringw player_name;
-        data.decodeStringW(&player_name);
-        uint32_t host_id = data.getUInt32();
-        float kart_color = data.getFloat();
-        uint32_t online_id = data.getUInt32();
-        PerPlayerDifficulty ppd = (PerPlayerDifficulty)data.getUInt8();
-        uint8_t local_id = data.getUInt8();
-        KartTeam team = (KartTeam)data.getUInt8();
-        auto player = std::make_shared<NetworkPlayerProfile>(peer, player_name,
-            host_id, kart_color, online_id, ppd, local_id, team);
-        std::string kart_name;
-        data.decodeString(&kart_name);
-        player->setKartName(kart_name);
-        players.push_back(player);
-    }
+    bool is_specator = true;
+    std::vector<std::shared_ptr<NetworkPlayerProfile> > players =
+        decodePlayers(data, peer, &is_specator);
+    setSpectator(is_specator);
+
     uint32_t random_seed = data.getUInt32();
     ItemManager::updateRandomSeed(random_seed);
     if (race_manager->isBattleMode())
@@ -283,6 +274,8 @@ void ClientLobby::addAllPlayers(Event* event)
         m_game_setup->setHitCaptureTime(hit_capture_limit, time_limit);
         uint16_t flag_return_timeout = data.getUInt16();
         race_manager->setFlagReturnTicks(flag_return_timeout);
+        unsigned flag_deactivated_time = data.getUInt16();
+        race_manager->setFlagDeactivatedTicks(flag_deactivated_time);
     }
     configRemoteKart(players, isSpectator() ? 1 :
         (int)NetworkConfig::get()->getNetworkPlayers().size());
@@ -290,8 +283,7 @@ void ClientLobby::addAllPlayers(Event* event)
     // Disable until render gui during loading is bug free
     //StateManager::get()->enterGameState();
 
-    // Live join or spectate if state is CONNECTED
-    if (m_state.load() == CONNECTED)
+    if (m_server_send_live_load_world)
     {
         World* w = World::getWorld();
         w->setLiveJoinWorld(true);
@@ -318,6 +310,39 @@ void ClientLobby::addAllPlayers(Event* event)
 }   // addAllPlayers
 
 //-----------------------------------------------------------------------------
+/* Get list of players from server and see if we are spectating it. */
+std::vector<std::shared_ptr<NetworkPlayerProfile> >
+  ClientLobby::decodePlayers(const BareNetworkString& data,
+                             std::shared_ptr<STKPeer> peer,
+                             bool* is_specator) const
+{
+    std::vector<std::shared_ptr<NetworkPlayerProfile> > players;
+    unsigned player_count = data.getUInt8();
+    for (unsigned i = 0; i < player_count; i++)
+    {
+        core::stringw player_name;
+        data.decodeStringW(&player_name);
+        uint32_t host_id = data.getUInt32();
+        float kart_color = data.getFloat();
+        uint32_t online_id = data.getUInt32();
+        PerPlayerDifficulty ppd = (PerPlayerDifficulty)data.getUInt8();
+        uint8_t local_id = data.getUInt8();
+        KartTeam team = (KartTeam)data.getUInt8();
+        std::string country_id;
+        data.decodeString(&country_id);
+        if (is_specator && host_id == STKHost::get()->getMyHostId())
+            *is_specator = false;
+        auto player = std::make_shared<NetworkPlayerProfile>(peer, player_name,
+            host_id, kart_color, online_id, ppd, local_id, team, country_id);
+        std::string kart_name;
+        data.decodeString(&kart_name);
+        player->setKartName(kart_name);
+        players.push_back(player);
+    }
+    return players;
+}   // decodePlayers
+
+//-----------------------------------------------------------------------------
 void ClientLobby::update(int ticks)
 {
     switch (m_state.load())
@@ -330,10 +355,13 @@ void ClientLobby::update(int ticks)
         break;
     case LINKED:
     {
+        NetworkConfig::get()->clearServerCapabilities();
         NetworkString* ns = getNetworkString();
         ns->addUInt8(LE_CONNECTION_REQUESTED)
             .addUInt32(ServerConfig::m_server_version)
-            .encodeString(StringUtils::getUserAgentString());
+            .encodeString(StringUtils::getUserAgentString())
+            // Reserved for future to supply list of network capabilities
+            .addUInt16(0);
 
         auto all_k = kart_properties_manager->getAllAvailableKarts();
         auto all_t = track_manager->getAllTrackIdentifiers();
@@ -576,11 +604,23 @@ void ClientLobby::connectionAccepted(Event* event)
     assert(server_version != 0);
     m_auto_started = false;
     m_state.store(CONNECTED);
+
+    unsigned list_caps = data.getUInt16();
+    std::vector<std::string> caps;
+    for (unsigned i = 0; i < list_caps; i++)
+    {
+        std::string cap;
+        data.decodeString(&cap);
+        caps.push_back(cap);
+    }
+    NetworkConfig::get()->setServerCapabilities(caps);
+
     float auto_start_timer = data.getFloat();
     int state_frequency_in_server = data.getUInt32();
     NetworkConfig::get()->setStateFrequency(state_frequency_in_server);
     if (auto_start_timer != std::numeric_limits<float>::max())
         NetworkingLobby::getInstance()->setStartingTimerTo(auto_start_timer);
+    m_server_enabled_chat = data.getUInt8() == 1;
 }   // connectionAccepted
 
 //-----------------------------------------------------------------------------
@@ -619,6 +659,8 @@ void ClientLobby::handleServerInfo(Event* event)
     each_line = _("Max players: %d", (int)max_player);
     NetworkingLobby::getInstance()->addMoreServerInfo(each_line);
 
+    // Reserved for extra spectators
+    u_data = data.getUInt8();
     u_data = data.getUInt8();
     auto game_mode = ServerConfig::getLocalGameMode(u_data);
     race_manager->setMinorMode(game_mode.first);
@@ -698,6 +740,7 @@ void ClientLobby::updatePlayerList(Event* event)
     unsigned player_count = data.getUInt8();
     core::stringw total_players;
     m_lobby_players.clear();
+    bool client_server_owner = false;
     for (unsigned i = 0; i < player_count; i++)
     {
         LobbyPlayer lp = {};
@@ -708,36 +751,37 @@ void ClientLobby::updatePlayerList(Event* event)
         lp.m_local_player_id = local_id;
         data.decodeStringW(&lp.m_user_name);
         total_players += lp.m_user_name;
-        uint8_t waiting_and_spectator = data.getUInt8();
-        bool is_peer_waiting_for_game = waiting_and_spectator == 1;
-        bool is_spectator = waiting_and_spectator == 2;
-        bool is_peer_server_owner = data.getUInt8() == 1;
+        uint8_t boolean_combine = data.getUInt8();
+        bool is_peer_waiting_for_game = (boolean_combine & 1) == 1;
+        bool is_spectator = ((boolean_combine >> 1) & 1) == 1;
+        bool is_peer_server_owner = ((boolean_combine >> 2) & 1) == 1;
+        bool ready = ((boolean_combine >> 3) & 1) == 1;
         // icon to be used, see NetworkingLobby::loadedFromFile
         lp.m_icon_id = is_peer_server_owner ? 0 :
             lp.m_online_id != 0 /*if online account*/ ? 1 : 2;
-        if (waiting)
-        {
-            if (is_spectator)
-                lp.m_icon_id = 5;
-            else if (!is_peer_waiting_for_game)
-                lp.m_icon_id = 3;
-        }
+        if (waiting && !is_peer_waiting_for_game)
+            lp.m_icon_id = 3;
+        if (is_spectator)
+            lp.m_icon_id = 5;
+        if (ready)
+            lp.m_icon_id = 4;
         lp.m_difficulty = (PerPlayerDifficulty)data.getUInt8();
         if (lp.m_difficulty == PLAYER_DIFFICULTY_HANDICAP)
         {
             lp.m_user_name = _("%s (handicapped)", lp.m_user_name);
         }
         lp.m_kart_team = (KartTeam)data.getUInt8();
-        bool ready = data.getUInt8() == 1;
-        if (ready)
-            lp.m_icon_id = 4;
         if (lp.m_host_id == STKHost::get()->getMyHostId())
         {
+            if (is_peer_server_owner)
+                client_server_owner = true;
             auto& local_players = NetworkConfig::get()->getNetworkPlayers();
             std::get<2>(local_players.at(local_id)) = lp.m_difficulty;
         }
+        data.decodeString(&lp.m_country_id);
         m_lobby_players.push_back(lp);
     }
+    STKHost::get()->setAuthorisedToControl(client_server_owner);
 
     // Notification sound for new player
     if (!m_total_players.empty() &&
@@ -769,7 +813,6 @@ void ClientLobby::handleBadConnection()
 //-----------------------------------------------------------------------------
 void ClientLobby::becomingServerOwner()
 {
-    STKHost::get()->setAuthorisedToControl(true);
     if (STKHost::get()->isClientServer())
         return;
 
@@ -819,9 +862,19 @@ void ClientLobby::connectionRefused(Event* event)
             _("Connection refused: Server is busy."));
         break;
     case RR_BANNED:
-        STKHost::get()->setErrorMessage(
-            _("Connection refused: You are banned from the server."));
+    {
+        core::stringw msg =
+            _("Connection refused: You are banned from the server.");
+        core::stringw reason;
+        data.decodeStringW(&reason);
+        if (!reason.empty())
+        {
+            msg += L"\n";
+            msg += reason;
+        }
+        STKHost::get()->setErrorMessage(msg);
         break;
+    }
     case RR_INCORRECT_PASSWORD:
         STKHost::get()->setErrorMessage(
             _("Connection refused: Server password is incorrect."));
@@ -853,16 +906,27 @@ void ClientLobby::startGame(Event* event)
     World::getWorld()->setPhase(WorldStatus::SERVER_READY_PHASE);
     uint64_t start_time = event->data().getUInt64();
     powerup_manager->setRandomSeed(start_time);
+
+    unsigned check_structure_count = event->data().getUInt8();
+    LinearWorld* lw = dynamic_cast<LinearWorld*>(World::getWorld());
+    if (lw)
+        lw->handleServerCheckStructureCount(check_structure_count);
+
+    NetworkItemManager* nim =
+    dynamic_cast<NetworkItemManager*>(ItemManager::get());
+    assert(nim);
+    nim->restoreCompleteState(event->data());
+
+    core::stringw err_msg = _("Failed to start the network game.");
     joinStartGameThread();
-    m_start_game_thread = std::thread([start_time, this]()
+    m_start_game_thread = std::thread([start_time, this, err_msg]()
         {
             const uint64_t cur_time = STKHost::get()->getNetworkTimer();
             if (!(start_time > cur_time))
             {
-                Log::warn("ClientLobby", "Network timer is too slow to catch "
+                Log::error("ClientLobby", "Network timer is too slow to catch "
                     "up, you must have a poor network.");
-                STKHost::get()->setErrorMessage(
-                    m_disconnected_msg.at(PDI_BAD_CONNECTION));
+                STKHost::get()->setErrorMessage(err_msg);
                 STKHost::get()->requestShutdown();
                 return;
             }
@@ -886,6 +950,7 @@ void ClientLobby::startSelection(Event* event)
     startVotingPeriod(data.getFloat());
     bool skip_kart_screen = data.getUInt8() == 1;
     m_server_auto_game_time = data.getUInt8() == 1;
+    m_server_enabled_track_voting = data.getUInt8() == 1;
     const unsigned kart_num = data.getUInt16();
     const unsigned track_num = data.getUInt16();
     m_available_karts.clear();
@@ -912,7 +977,8 @@ void ClientLobby::startSelection(Event* event)
     screen->setLiveJoin(false);
     // In case of auto-connect or continue a grand prix, use random karts
     // (or previous kart) from server and go to track selection
-    if (NetworkConfig::get()->isAutoConnect() || skip_kart_screen)
+    if ((NetworkConfig::get()->isAutoConnect() || skip_kart_screen) &&
+        m_server_enabled_track_voting)
     {
         input_manager->setMasterPlayerOnly(true);
         for (auto& p : NetworkConfig::get()->getNetworkPlayers())
@@ -956,13 +1022,19 @@ void ClientLobby::raceFinished(Event* event)
     if (m_game_setup->isGrandPrix())
     {
         int t = data.getUInt32();
+        core::stringw kart_name;
+        data.decodeStringW(&kart_name);
         lw->setFastestLapTicks(t);
+        lw->setFastestKartName(kart_name);
         race_manager->configGrandPrixResultFromNetwork(data);
     }
     else if (race_manager->modeHasLaps())
     {
         int t = data.getUInt32();
+        core::stringw kart_name;
+        data.decodeStringW(&kart_name);
         lw->setFastestLapTicks(t);
+        lw->setFastestKartName(kart_name);
     }
 
     if (lw)
@@ -1061,8 +1133,7 @@ void ClientLobby::backToLobby(Event *event)
 void ClientLobby::finishedLoadingWorld()
 {
     NetworkString* ns = getNetworkString(1);
-    // Live join or spectate if state is CONNECTED
-    ns->setSynchronous(m_state.load() == CONNECTED);
+    ns->setSynchronous(m_server_send_live_load_world);
     ns->addUInt8(LE_CLIENT_LOADED_WORLD);
     sendToServer(ns, true);
     delete ns;
@@ -1078,6 +1149,12 @@ void ClientLobby::liveJoinAcknowledged(Event* event)
     const NetworkString& data = event->data();
     m_start_live_game_time = data.getUInt64();
     powerup_manager->setRandomSeed(m_start_live_game_time);
+
+    unsigned check_structure_count = event->data().getUInt8();
+    LinearWorld* lw = dynamic_cast<LinearWorld*>(World::getWorld());
+    if (lw)
+        lw->handleServerCheckStructureCount(check_structure_count);
+
     m_start_live_game_time = data.getUInt64();
     m_last_live_join_util_ticks = data.getUInt32();
     for (unsigned i = 0; i < w->getNumKarts(); i++)
@@ -1092,6 +1169,40 @@ void ClientLobby::liveJoinAcknowledged(Event* event)
     assert(nim);
     nim->restoreCompleteState(data);
     w->restoreCompleteState(data);
+
+    if (race_manager->supportsLiveJoining() && data.size() > 0)
+    {
+        // Get and update the players list 1 more time in case the was
+        // player connection or disconnection
+        std::vector<std::shared_ptr<NetworkPlayerProfile> > players =
+            decodePlayers(data);
+        w->resetElimination();
+        for (unsigned i = 0; i < players.size(); i++)
+        {
+            AbstractKart* k = w->getKart(i);
+            if (k->getController()->isLocalPlayerController())
+                continue;
+            k->reset();
+            // Only need to change non local player karts
+            RemoteKartInfo& rki = race_manager->getKartInfo(i);
+            rki.copyFrom(players[i], players[i]->getLocalPlayerId());
+            if (rki.isReserved())
+            {
+                World::getWorld()->eliminateKart(i,
+                    false/*notify_of_elimination*/);
+                k->setPosition(
+                    World::getWorld()->getCurrentNumKarts() + 1);
+                k->finishedRace(World::getWorld()->getTime(),
+                    true/*from_server*/);
+            }
+            else
+            {
+                // Will be reset once again after live join is finished
+                addLiveJoiningKart(i, rki, 0/*live_join_util_ticks*/);
+                k->getNode()->setVisible(false);
+            }
+        }
+    }
 }   // liveJoinAcknowledged
 
 //-----------------------------------------------------------------------------
@@ -1145,6 +1256,8 @@ void ClientLobby::handleKartInfo(Event* event)
     uint8_t local_id = data.getUInt8();
     std::string kart_name;
     data.decodeString(&kart_name);
+    std::string country_id;
+    data.decodeString(&country_id);
 
     RemoteKartInfo& rki = race_manager->getKartInfo(kart_id);
     rki.setPlayerName(player_name);
@@ -1154,6 +1267,7 @@ void ClientLobby::handleKartInfo(Event* event)
     rki.setPerPlayerDifficulty(ppd);
     rki.setLocalPlayerId(local_id);
     rki.setKartName(kart_name);
+    rki.setCountryId(country_id);
     addLiveJoiningKart(kart_id, rki, live_join_util_ticks);
 
     core::stringw msg;
@@ -1271,7 +1385,7 @@ void ClientLobby::changeSpectateTarget(PlayerAction action, int value,
         });
     }
 
-    const int num_karts = karts.size();
+    const int num_karts = (int)karts.size();
     int current_idx = -1;
     if (cam->getKart())
     {

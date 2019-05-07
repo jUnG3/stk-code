@@ -1,5 +1,5 @@
 version: 4
-stk_version: 0.10.0
+stk_version: 1.0
 kart: kiki &#x2606;&#x2605;STK&#x2605;&#x2606;
 kart_color: 0.000000
 kart_list_end
@@ -8,7 +8,7 @@ difficulty: 3
 mode: time-trial
 track: olivermath
 laps: 6
-min_time: 78.728027
+min_time: 78.733
 replay_uid: 698084198394007800
 size:     1263
 0.000000  -15.561723 0.198496 -3.274259  0.000000 0.999988 0.000000 -0.004796  0.000000  0.000000  0.291244 0.291244 0.291244 0.291244 0  0 0.000000 6 4 0  -1.458740 0 0 0 0 0

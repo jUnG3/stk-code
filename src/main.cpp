@@ -1989,6 +1989,9 @@ int main(int argc, char *argv[] )
 
         // Preload the explosion effects (explode.png)
         ParticleKindManager::get()->getParticles("explosion.xml");
+        ParticleKindManager::get()->getParticles("explosion_bomb.xml");
+        ParticleKindManager::get()->getParticles("explosion_cake.xml");
+        ParticleKindManager::get()->getParticles("jump_explosion.xml");
 
         GUIEngine::addLoadingIcon( irr_driver->getTexture(FileManager::GUI_ICON,
                                                           "options_video.png"));
@@ -2132,13 +2135,12 @@ int main(int argc, char *argv[] )
                     #else
                     irr::core::stringw version = "OpenGL 3.3";
                     #endif
-                    MessageDialog *dialog =
-                        new MessageDialog(_("Your OpenGL version appears to be "
-                                            "too old. Please verify if an "
-                                            "update for your video driver is "
-                                            "available. SuperTuxKart requires "
-                                            "%s or better.", version), 
-                                            /*from queue*/ true);
+                    MessageDialog *dialog = new MessageDialog(_(
+                        "Your graphics driver appears to be very old. Please "
+                        "check if an update is available. SuperTuxKart "
+                        "recommends a driver supporting %s or better. The game "
+                        "will likely still run, but in a reduced-graphics mode.",
+                        version), /*from queue*/ true);
                     GUIEngine::DialogQueue::get()->pushDialog(dialog);
                 }
                 #endif

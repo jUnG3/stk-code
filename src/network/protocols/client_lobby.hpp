@@ -46,6 +46,7 @@ struct LobbyPlayer
     uint32_t m_online_id;
     /* Icon used in networking lobby, see NetworkingLobby::loadedFromFile. */
     int m_icon_id;
+    std::string m_country_id;
     /* Icon id for spectator in NetworkingLobby::loadedFromFile is 5. */
     bool isSpectator() const { return m_icon_id == 5; }
 };
@@ -100,6 +101,12 @@ private:
 
     bool m_server_live_joinable;
 
+    bool m_server_send_live_load_world;
+
+    bool m_server_enabled_chat;
+
+    bool m_server_enabled_track_voting;
+
     uint64_t m_auto_back_to_lobby_time;
 
     uint64_t m_start_live_game_time;
@@ -123,6 +130,10 @@ private:
     void liveJoinAcknowledged(Event* event);
     void handleKartInfo(Event* event);
     void finishLiveJoin();
+    std::vector<std::shared_ptr<NetworkPlayerProfile> >
+         decodePlayers(const BareNetworkString& data,
+         std::shared_ptr<STKPeer> peer = nullptr,
+         bool* is_specator = NULL) const;
 public:
              ClientLobby(const TransportAddress& a, std::shared_ptr<Server> s);
     virtual ~ClientLobby();
@@ -143,7 +154,7 @@ public:
                                            { return m_state.load() >= RACING; }
     bool waitingForServerRespond() const
                             { return m_state.load() == REQUESTING_CONNECTION; }
-    bool isLobbyReady() const           { return m_state.load() == CONNECTED; }
+    bool isLobbyReady() const                      { return !m_first_connect; }
     bool isWaitingForGame() const                { return m_waiting_for_game; }
     bool isServerAutoGameTime() const       { return m_server_auto_game_time; }
     virtual bool isRacing() const OVERRIDE { return m_state.load() == RACING; }
@@ -159,6 +170,9 @@ public:
     void changeSpectateTarget(PlayerAction action, int value,
                               Input::InputType type) const;
     void addSpectateHelperMessage() const;
+    bool serverEnabledChat() const            { return m_server_enabled_chat; }
+    bool serverEnabledTrackVoting() const
+                                      { return m_server_enabled_track_voting; }
 };
 
 #endif // CLIENT_LOBBY_HPP

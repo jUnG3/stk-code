@@ -49,7 +49,7 @@ enum PeerDisconnectInfo : unsigned int
     PDI_TIMEOUT = 0, //!< Timeout disconnected (default in enet).
     PDI_NORMAL = 1, //!< Normal disconnction with acknowledgement
     PDI_KICK = 2, //!< Kick disconnection
-    PDI_BAD_CONNECTION = 3, //!< Bad connection disconnection
+    PDI_KICK_HIGH_PING = 3, //!< Too high ping, kicked by server
 };   // PeerDisconnectInfo
 
 /*! \class STKPeer
@@ -99,6 +99,10 @@ protected:
     std::set<unsigned> m_available_kart_ids;
 
     std::string m_user_version;
+
+    /** List of client capabilities set when connecting it, to determine
+     *  features available in same version. */
+    std::vector<std::string> m_client_capabilities;
 
 public:
     STKPeer(ENetPeer *enet_peer, STKHost* host, uint32_t host_id);
@@ -231,6 +235,12 @@ public:
             return 0;
         return (int)(diff / 1000);
     }
+    // ------------------------------------------------------------------------
+    void setClientCapabilities(std::vector<std::string>& caps)
+                                   { m_client_capabilities = std::move(caps); }
+    // ------------------------------------------------------------------------
+    const std::vector<std::string>& getClientCapabilities() const
+                                              { return m_client_capabilities; }
 };   // STKPeer
 
 #endif // STK_PEER_HPP

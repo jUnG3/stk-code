@@ -70,6 +70,7 @@ class Kart : public AbstractKart
     friend class Skidding;
 private:
     int m_network_finish_check_ticks;
+    int m_network_confirmed_finish_ticks;
 protected:
     /** Offset of the graphical kart chassis from the physical chassis. */
     float m_graphical_y_offset;
@@ -98,6 +99,13 @@ protected:
     bool m_is_jumping;
 
     bool m_enabled_network_spectator;
+
+    /** The sign of torque to apply after hitting a bubble gum. */
+    bool        m_bubblegum_torque_sign;
+
+    /** A short time after a collision acceleration is disabled to allow
+     *  the karts to bounce back*/
+    uint8_t      m_bounce_back_ticks;
 
 protected:
     /** Handles speed increase and capping due to powerup, terrain, ... */
@@ -190,10 +198,6 @@ protected:
      *  the kart will brake. */
     int          m_brake_ticks;
 
-    /** A short time after a collision acceleration is disabled to allow
-     *  the karts to bounce back*/
-    int16_t      m_bounce_back_ticks;
-
     /** Time a kart is invulnerable. */
     int16_t      m_invulnerable_ticks;
 
@@ -219,9 +223,6 @@ protected:
     bool            m_finished_race;
 
     float           m_finish_time;
-
-    /** The torque to apply after hitting a bubble gum. */
-    float        m_bubblegum_torque;
 
      /** The amount of energy collected with nitro cans. Note that it
       *  must be float, since dt is subtraced in each timestep. */
@@ -494,10 +495,9 @@ public:
     /** Makes a kart invulnerable for a certain amount of time. */
     virtual void setInvulnerableTicks(int ticks) OVERRIDE
     {
-        // The last 3 bits are saving fire clicked, kart animation status and
-        // plunger state for rewind
-        if (ticks > 8191)
-            ticks = 8191;
+        // int16_t max
+        if (ticks > 32767)
+            ticks = 32767;
         m_invulnerable_ticks = ticks;
     }   // setInvulnerableTicks
     // ------------------------------------------------------------------------

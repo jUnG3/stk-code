@@ -144,9 +144,20 @@ namespace ServerConfig
         "motd", "Message of today shown in lobby, you can enter encoded XML "
         "words here or a file.txt and let STK load it."));
 
+    SERVER_CFG_PREFIX BoolServerConfigParam m_chat
+        SERVER_CFG_DEFAULT(BoolServerConfigParam(true, "chat",
+        "If off this server will ignore chat message from all players."));
+
+    SERVER_CFG_PREFIX BoolServerConfigParam m_track_voting
+        SERVER_CFG_DEFAULT(BoolServerConfigParam(true, "track-voting",
+        "Allow players to vote track to play, if off server will pick next "
+        "track to play randomly."));
+
     SERVER_CFG_PREFIX FloatServerConfigParam m_voting_timeout
         SERVER_CFG_DEFAULT(FloatServerConfigParam(30.0f, "voting-timeout",
-        "Timeout in seconds for voting tracks in server."));
+        "Timeout in seconds for selecting karts and (or) voting tracks in "
+        "server, you may want to use a lower value if you have track-voting "
+        "off."));
 
     SERVER_CFG_PREFIX FloatServerConfigParam m_validation_timeout
         SERVER_CFG_DEFAULT(FloatServerConfigParam(20.0f, "validation-timeout",
@@ -238,10 +249,15 @@ namespace ServerConfig
         "available for players to choose, and official-karts-threshold will "
         "be made 1.0."));
 
-    SERVER_CFG_PREFIX FloatServerConfigParam m_flag_return_timemout
-        SERVER_CFG_DEFAULT(FloatServerConfigParam(20.0f, "flag-return-timemout",
+    SERVER_CFG_PREFIX FloatServerConfigParam m_flag_return_timeout
+        SERVER_CFG_DEFAULT(FloatServerConfigParam(20.0f, "flag-return-timeout",
         "Time in seconds when a flag is dropped a by player in CTF "
         "returning to its own base."));
+
+    SERVER_CFG_PREFIX FloatServerConfigParam m_flag_deactivated_time
+        SERVER_CFG_DEFAULT(FloatServerConfigParam(3.0f, "flag-deactivated-time",
+        "Time in seconds to deactivate a flag when it's captured or returned "
+        "to own base by players."));
 
     SERVER_CFG_PREFIX IntServerConfigParam m_hit_limit
         SERVER_CFG_DEFAULT(IntServerConfigParam(20, "hit-limit",
@@ -321,7 +337,7 @@ namespace ServerConfig
 
     // ========================================================================
     /** Server version, will be advanced if there are protocol changes. */
-    static const uint32_t m_server_version = 5;
+    static const uint32_t m_server_version = 6;
     // ========================================================================
     void loadServerConfig(const std::string& path = "");
     // ------------------------------------------------------------------------
