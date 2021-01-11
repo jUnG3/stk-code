@@ -25,6 +25,10 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "STKRelease")
 endif()
 
+if(POLICY CMP0072)
+    cmake_policy(SET CMP0072 NEW)
+endif()
+
 option(SERVER_ONLY "Create a server only (i.e. no graphics or sound)" OFF)
 option(CHECK_ASSETS "Check if assets are installed in ../stk-assets" ON)
 option(USE_SYSTEM_ANGELSCRIPT "Use system angelscript instead of built-in angelscript. If you enable this option, make sure to use a compatible version." OFF)
@@ -175,6 +179,7 @@ endif()
 
 if(UNIX AND NOT APPLE)
     find_package(PkgConfig REQUIRED)
+    find_package(Mosquitto REQUIRED)
 
     if(NOT PKGCONFIG_FOUND)
         message(FATAL_ERROR "Pkg-config not found.")
@@ -603,6 +608,7 @@ target_link_libraries(supertuxkart
     ${CURL_LIBRARIES}
     ${LIBRESOLV_LIBRARY}
     ${MCPP_LIBRARY}
+    ${MOSQUITTO_LIBRARIES}
     )
 
 if (USE_SQLITE3)

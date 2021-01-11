@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Fabian Gajek
+ * Copyright (C) 2021 Stjepan Soldo
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -16,34 +16,23 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
+#ifndef HEADER_EVENT_MQTT_PUBLISHER_H
+#define HEADER_EVENT_MQTT_PUBLISHER_H
+
 #include "eventhub.hpp"
+#include "client.hpp"
 
-#include <cstdarg>
+class MQTTPublisher : public EventSink {
+private:
+    Client mqttClient;
+public:
 
-EventHub* EventHub::m_event_hub_singleton = nullptr;
+    MQTTPublisher();
 
-void EventHub::publishEvent(const std::string& type) {
-    m_mutex.lock();
-    for (auto const &sink: m_sinks) {
-        sink->publishEvent(type);
-    }
-    m_mutex.unlock();
-}
+    void publishEvent(const std::string &type) override;
 
+    void
+    publishEvent(const std::string &type, const std::string &info) override;
+};
 
-void EventHub::publishEvent(const std::string& type, const char* format...) {
-    va_list args;
-    va_start(args, format);
-
-    m_mutex.lock();
-
-    vsnprintf(m_buffer, sizeof(m_buffer), format, args);
-
-    va_end(args);
-
-    for (auto const &sink: m_sinks) {
-        sink->publishEvent(type, std::string(m_buffer));
-    }
-
-    m_mutex.unlock();
-}
+#endif //HEADER_EVENT_MQTT_PUBLISHER_H

@@ -81,7 +81,7 @@
         max-offset-distance="250.0"
         interval="1"
         max-height="4.0"      min-height="0"
-        fast-ping-distance="50" 
+        fast-ping-distance="50"
         early-target-factor="1"
         target-distance="15"  target-max-angle = "90"
         min-interpolation-distance="5"
@@ -239,7 +239,7 @@
               multi   ="20       0    25    80       0        0       0     0     0     0" />
     </weights>
   </ftl-weight-list>
-  
+
   <battle-weight-list>
     <weights num-karts="1">
       <!--              bubble  cake  bowl  zipper  plunger  switch swattr rubber para  anvil -->
@@ -264,6 +264,6 @@
     </weights>
   </tutorial-weight-list>
 
-    
+
 </powerup>
 
