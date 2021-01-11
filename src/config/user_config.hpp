@@ -1024,6 +1024,9 @@ namespace UserConfigParams
     PARAM_PREFIX StringUserConfigParam      m_commandline
             PARAM_DEFAULT( StringUserConfigParam("", "commandline",
                              "Allows to set commandline args in config file") );
+    PARAM_PREFIX BoolUserConfigParam    m_publishEvents
+        PARAM_DEFAULT(BoolUserConfigParam(false, "publish_events",
+                                          "Enable event tracking"));
 
     // TODO? implement blacklist for new irrlicht device and GUI
     PARAM_PREFIX std::vector<std::string>   m_blacklist_res;

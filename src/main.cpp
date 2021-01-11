@@ -169,6 +169,7 @@
 #include <limits>
 
 #include <IEventReceiver.h>
+#include <eventhub/mqtt_publisher.hpp>
 
 #include "main_loop.hpp"
 #include "achievements/achievements_manager.hpp"
@@ -944,6 +945,16 @@ int handleCmdLinePreliminary()
     {
         std::string file(s);
         EventHub::get()->registerSink(new FilePublisher(file));
+    }
+
+    try {
+        EventHub::get()->registerSink(new MQTTPublisher());
+    } catch (const std::invalid_argument &e) {
+        Log::warn("Event", "invalid_argument: %s", e.what());
+        return 1;
+    } catch (const std::exception &e) {
+        Log::warn("Event", "error during initialization");
+        return 1;
     }
 
     return 0;

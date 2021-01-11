@@ -18,6 +18,10 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "STKRelease")
 endif()
 
+if(POLICY CMP0072)
+    cmake_policy(SET CMP0072 NEW)
+endif()
+
 option(SERVER_ONLY "Create a server only (i.e. no graphics or sound)" OFF)
 option(CHECK_ASSETS "Check if assets are installed in ../stk-assets" ON)
 option(USE_SYSTEM_ANGELSCRIPT "Use system angelscript instead of built-in angelscript. If you enable this option, make sure to use a compatible version." OFF)
@@ -26,7 +30,7 @@ option(USE_SYSTEM_GLEW "Use system GLEW instead of the built-in version, when av
 option(USE_SYSTEM_WIIUSE "Use system WiiUse instead of the built-in version, when available." OFF)
 
 option(USE_CRYPTO_OPENSSL "Use OpenSSL instead of Nettle for cryptography in STK." OFF)
-CMAKE_DEPENDENT_OPTION(BUILD_RECORDER "Build opengl recorder" ON
+CMAKE_DEPENDENT_OPTION(BUILD_RECORDER "Build opengl recorder" OFF
     "NOT SERVER_ONLY;NOT APPLE" OFF)
 CMAKE_DEPENDENT_OPTION(USE_FRIBIDI "Support for right-to-left languages" ON
     "NOT SERVER_ONLY" OFF)
@@ -137,6 +141,7 @@ endif()
 
 if(UNIX AND NOT APPLE)
     find_package(PkgConfig REQUIRED)
+    find_package(Mosquitto REQUIRED)
 
     if(NOT PKGCONFIG_FOUND)
         message(FATAL_ERROR "Pkg-config not found.")
@@ -516,6 +521,7 @@ target_link_libraries(supertuxkart
     stkirrlicht
     ${Angelscript_LIBRARIES}
     ${CURL_LIBRARIES}
+    ${MOSQUITTO_LIBRARIES}
     )
 
 if (USE_CRYPTO_OPENSSL)

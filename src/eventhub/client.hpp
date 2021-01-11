@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Fabian Gajek
+ * Copyright (C) 2021 Stjepan Soldo
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -16,34 +16,30 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
-#include "eventhub.hpp"
+#ifndef STK_MQTT_CLIENT_H
+#define STK_MQTT_CLIENT_H
 
-#include <cstdarg>
+#include <mosquitto.h>
+#include <string>
+#include <cerrno>
+#include <iostream>
 
-EventHub* EventHub::m_event_hub_singleton = nullptr;
+class Client {
+private:
+    char *id;
+    struct mosquitto *mosquittoClient;
+    int port;
+    char *host;
+    int keepAlive;
+public:
+    Client();
 
-void EventHub::publishEvent(const std::string& type) {
-    m_mutex.lock();
-    for (auto const &sink: m_sinks) {
-        sink->publishEvent(type);
-    }
-    m_mutex.unlock();
-}
+    ~Client();
 
+    void
+    sendMessage(const char *topic, const char *message,
+                int qualityOfService = 0,
+                bool retain = false) const;
+};
 
-void EventHub::publishEvent(const std::string& type, const char* format...) {
-    va_list args;
-    va_start(args, format);
-
-    m_mutex.lock();
-
-    vsnprintf(m_buffer, sizeof(m_buffer), format, args);
-
-    va_end(args);
-
-    for (auto const &sink: m_sinks) {
-        sink->publishEvent(type, std::string(m_buffer));
-    }
-
-    m_mutex.unlock();
-}
+#endif //STK_MQTT_CLIENT_H

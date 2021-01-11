@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Fabian Gajek
+ * Copyright (C) 2021 Stjepan Soldo
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -16,34 +16,22 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
-#include "eventhub.hpp"
+#include "mqtt_publisher.hpp"
+#include <cstring>
 
-#include <cstdarg>
-
-EventHub* EventHub::m_event_hub_singleton = nullptr;
-
-void EventHub::publishEvent(const std::string& type) {
-    m_mutex.lock();
-    for (auto const &sink: m_sinks) {
-        sink->publishEvent(type);
-    }
-    m_mutex.unlock();
+void MQTTPublisher::publishEvent(const std::string &type) {
+    mqttClient.sendMessage("stk", type.c_str());
 }
 
-
-void EventHub::publishEvent(const std::string& type, const char* format...) {
-    va_list args;
-    va_start(args, format);
-
-    m_mutex.lock();
-
-    vsnprintf(m_buffer, sizeof(m_buffer), format, args);
-
-    va_end(args);
-
-    for (auto const &sink: m_sinks) {
-        sink->publishEvent(type, std::string(m_buffer));
-    }
-
-    m_mutex.unlock();
+void
+MQTTPublisher::publishEvent(const std::string &type, const std::string &info) {
+    char *buffer = new char[type.length() + info.length() + 3];
+    std::strcpy(buffer, type.c_str());
+    std::strcat(buffer, " ");
+    std::strcat(buffer, info.c_str());
+    mqttClient.sendMessage("stk", buffer);
+    delete[] buffer;
 }
+
+MQTTPublisher::MQTTPublisher()
+        : mqttClient(Client()) {}

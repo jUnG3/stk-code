@@ -73,3 +73,6 @@ lib/libogg
 lib/libvorbis
 lib/openal
 lib/openssl
+
+# IDEA
+.idea/

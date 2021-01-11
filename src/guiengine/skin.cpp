@@ -1318,7 +1318,7 @@ void Skin::drawSpinnerBody(const core::recti &rect, Widget* widget,
         int player_id=q->getSpinnerWidgetPlayerID();
 
         std::string spinner = "spinner::deactivated";
-        
+
         if (player_id <= 4)
             spinner = "spinner" + StringUtils::toString(player_id+1) + "::neutral";
 
@@ -1410,14 +1410,14 @@ void Skin::drawSpinnerBody(const core::recti &rect, Widget* widget,
                                                (int)((widget->m_w
                                                       - 2*handle_size)*value),
                                         rect.UpperLeftCorner.Y + widget->m_h);
-    
+
             const ITexture* texture =
                 SkinConfig::m_render_params["gaugefill::neutral"].getImage();
             const int texture_w = texture->getSize().Width;
             const int texture_h = texture->getSize().Height;
-    
+
             const core::recti source_area(0, 0, texture_w, texture_h);
-    
+
             draw2DImage(texture, dest_area, source_area, 0 /* no clipping */, 0,
                         true /* alpha */);
         }
@@ -2369,7 +2369,7 @@ core::recti Skin::draw3DWindowBackground(IGUIElement *element,
     {
         if (ModalDialog::getCurrent()->fadeBackground())
             drawBGFadeColor();
-        
+
         // draw frame
         if (m_dialog_size < 1.0f)
         {
@@ -2382,7 +2382,7 @@ core::recti Skin::draw3DWindowBackground(IGUIElement *element,
             sized_rect.UpperLeftCorner.Y  = (int)(center.Y -(h/2.0f)*tex_size);
             sized_rect.LowerRightCorner.X = (int)(center.X +(w/2.0f)*tex_size);
             sized_rect.LowerRightCorner.Y = (int)(center.Y +(h/2.0f)*tex_size);
-            
+
             drawBoxFromStretchableTexture(ModalDialog::getCurrent(), sized_rect,
                                SkinConfig::m_render_params["window::neutral"]);
 
